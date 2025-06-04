@@ -1,7 +1,7 @@
 package org.apache.spark.sql.execution.datasources.milvus
 
 import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.junit.jupiter.api.{DisplayName, Test}
+import org.junit.jupiter.api.Test
 
 class MilvusSparkTest {
 
@@ -32,7 +32,7 @@ class MilvusSparkTest {
     df.write.format("org.apache.spark.sql.execution.datasources.milvus.MilvusDataSource")
       .option("uri", MilvusInstanceUtil.uri)
       .option("collection", MilvusInstanceUtil.COLLECTION_NAME2)
-      .mode(SaveMode.Overwrite)
+      .mode(SaveMode.Append)
       .save()
     milvusInstanceUtil.queryCollectionCount2()
     milvusInstanceUtil.queryCollection2()

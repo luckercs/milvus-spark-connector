@@ -3,6 +3,8 @@ package com.luckercs;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import io.milvus.common.utils.JsonUtils;
+import io.milvus.orm.iterator.QueryIterator;
+import io.milvus.response.QueryResultsWrapper;
 import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.ConsistencyLevel;
@@ -10,6 +12,7 @@ import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.service.collection.request.*;
 import io.milvus.v2.service.vector.request.InsertReq;
+import io.milvus.v2.service.vector.request.QueryIteratorReq;
 import io.milvus.v2.service.vector.request.QueryReq;
 import io.milvus.v2.service.vector.response.QueryResp;
 import org.apache.spark.sql.execution.datasources.MilvusCommonUtils;
@@ -27,10 +30,12 @@ public class MilvusInstance {
     public static void main(String[] args) {
         MilvusInstance milvusInstanceTest = new MilvusInstance();
         milvusInstanceTest.init();
+
         milvusInstanceTest.createCollection();
         milvusInstanceTest.insertCollection();
         milvusInstanceTest.queryCollection();
         milvusInstanceTest.close();
+        milvusInstanceTest.dropCollection();
     }
 
     private MilvusClientV2 client;
@@ -65,6 +70,14 @@ public class MilvusInstance {
 
     public void queryCollection() {
         queryCollection(client, COLLECTION_NAME);
+    }
+
+    public void queryIteratorCollection() {
+        queryIteratorCollection(client, COLLECTION_NAME);
+    }
+
+    public void dropCollection() {
+        dropCollection(client, COLLECTION_NAME);
     }
 
     private static void createCollection(MilvusClientV2 client, String COLLECTION_NAME) {
@@ -179,6 +192,21 @@ public class MilvusInstance {
             System.out.println("");
         }
         System.out.println("query from collection " + COLLECTION_NAME);
+    }
+
+    private static void queryIteratorCollection(MilvusClientV2 client, String COLLECTION_NAME) {
+        QueryIterator queryIterator = client.queryIterator(QueryIteratorReq.builder().databaseName("default").collectionName(COLLECTION_NAME).consistencyLevel(ConsistencyLevel.STRONG).batchSize(5L).outputFields(Arrays.asList("id", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f10_2", "f11", "vec_dense", "vec_binary", "vec_sparse", "vec_fp16")).build());
+        while (true) {
+            List<QueryResultsWrapper.RowRecord> res = queryIterator.next();
+            if (res.isEmpty()) {
+                queryIterator.close();
+                break;
+            }
+
+            for (QueryResultsWrapper.RowRecord record : res) {
+                System.out.println(record);
+            }
+        }
     }
 
     private static void queryCollectionBinary(MilvusClientV2 client, String COLLECTION_NAME) {

@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import io.milvus.orm.iterator.QueryIterator;
 import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
+import io.milvus.v2.common.ConsistencyLevel;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq;
 import io.milvus.v2.service.collection.request.HasCollectionReq;
@@ -90,7 +91,7 @@ public class MilvusUtil {
             outputFields.add(fieldSchema.getName());
         }
         QueryIterator res = client.queryIterator(
-                QueryIteratorReq.builder().databaseName(dbName).collectionName(collectionName).batchSize(batchSize).outputFields(outputFields).build());
+                QueryIteratorReq.builder().databaseName(dbName).collectionName(collectionName).batchSize(batchSize).expr("").ignoreGrowing(false).consistencyLevel(ConsistencyLevel.STRONG).outputFields(outputFields).build());
         return res;
     }
 

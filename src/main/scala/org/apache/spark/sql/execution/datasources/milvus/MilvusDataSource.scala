@@ -17,6 +17,9 @@ class MilvusDataSource extends DataSourceRegister with RelationProvider with Cre
   )
 
   override def createRelation(sqlContext: SQLContext, mode: SaveMode, parameters: Map[String, String], data: DataFrame): BaseRelation = {
+    if (mode.equals(SaveMode.Overwrite) || mode.equals(SaveMode.ErrorIfExists)) {
+      throw new RuntimeException("Only Append mode is supported")
+    }
     val milvusRelation = MilvusRelation(
       sqlContext,
       parameters.getOrElse("uri", throw new IllegalArgumentException("uri parameter is required")),
@@ -25,7 +28,7 @@ class MilvusDataSource extends DataSourceRegister with RelationProvider with Cre
       parameters.getOrElse("collection", throw new IllegalArgumentException("collection parameter is required")),
       parameters.getOrElse("batchsize", "1000")
     )
-    milvusRelation.insert(data, mode.equals(SaveMode.Overwrite))
+    milvusRelation.insert(data, true)
     milvusRelation
   }
 }

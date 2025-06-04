@@ -1,13 +1,16 @@
 package org.apache.spark.sql.execution.datasources.milvus
 
 import com.google.gson.{Gson, JsonArray, JsonObject}
+import io.milvus.response.QueryResultsWrapper
 import io.milvus.v2.common
 import io.milvus.v2.service.collection.request.CreateCollectionReq
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.execution.datasources.MilvusUtil
+import org.apache.spark.sql.execution.datasources.milvus.MilvusRelation.{Log, LogTag}
 import org.apache.spark.sql.sources.{BaseRelation, TableScan}
 import org.apache.spark.sql.types.{DataTypes, StructType}
 import org.apache.spark.sql.{DataFrame, Row, RowFactory, SQLContext}
+import org.slf4j.LoggerFactory
 
 import java.nio.ByteBuffer
 import java.util
@@ -45,39 +48,46 @@ case class MilvusRelation(
   }
 
   override def buildScan(): RDD[Row] = {
-    val milvusSchemas = getMilvusSchemas()
+    val milvusSchemas: util.List[CreateCollectionReq.FieldSchema] = getMilvusSchemas()
     val milvusUtil = new MilvusUtil(uri, token, dbName)
     val milvusClient = milvusUtil.getClient
     val queryIterator = milvusUtil.queryCollection(milvusClient, dbName, collectionName, batchsize.toLong)
-    val rows: util.ArrayList[Row] = new util.ArrayList[Row]
+    val rdds = new util.ArrayList[RDD[Row]]()
+
     var flag = true
     while (flag) {
       val milvusRows = queryIterator.next()
       if (milvusRows.isEmpty()) {
         queryIterator.close()
         flag = false
-      }
-      for (milvusRow <- milvusRows.asScala) {
-        val milvusRowFieldValues: util.Map[String, AnyRef] = milvusRow.getFieldValues
-        val milvusRowValuesSortByKey: Array[Object] = getValuesBySortedKey(milvusRowFieldValues)
-        val milvusSparkData = milvusData2SparkData(milvusSchemas, milvusRowValuesSortByKey)
-        rows.add(RowFactory.create(milvusSparkData: _*))
+      } else {
+        Log.info(LogTag + "querying data from milvus with batchsize:" + batchsize)
+        val batchRows = new util.ArrayList[Row]()
+        for (milvusRow: QueryResultsWrapper.RowRecord <- milvusRows.asScala) {
+          val milvusRowFieldValues: util.Map[String, AnyRef] = milvusRow.getFieldValues
+          val milvusRowValuesSortByKey: Array[Object] = getValuesBySortedKey(milvusRowFieldValues)
+          val milvusSparkData = milvusData2SparkData(milvusSchemas, milvusRowValuesSortByKey)
+          batchRows.add(RowFactory.create(milvusSparkData: _*))
+        }
+        rdds.add(sqlContext.sparkContext.parallelize(batchRows.asScala))
       }
     }
-    val rowSeq = rows.asScala
+    val resRDD = sqlContext.sparkContext.union(rdds.asScala)
     queryIterator.close()
     milvusUtil.closeClient(milvusClient)
-    sqlContext.sparkContext.parallelize(rowSeq)
+    resRDD
   }
+
 
   def insert(data: DataFrame, overwrite: Boolean): Unit = {
     data.foreachPartition((rows: Iterator[Row]) => {
       val milvusSchemas = getMilvusSchemas()
       val milvusUtil = new MilvusUtil(uri, token, dbName)
-      val milvusRows: util.List[JsonObject] = new util.ArrayList[JsonObject]()
+      val milvusRows = new util.ArrayList[JsonObject]()
       rows.foreach(row => {
         milvusRows.add(SparkData2milvusData(milvusSchemas, row))
         if (milvusRows.size() >= batchsize.toInt) {
+          Log.info(LogTag + "insert data to milvus with batchsize:" + batchsize)
           milvusUtil.insertCollection(collectionName, milvusRows)
           milvusRows.clear()
         }
@@ -336,4 +346,9 @@ case class MilvusRelation(
     values.toArray
   }
 
+}
+
+object MilvusRelation {
+  private val Log = LoggerFactory.getLogger(this.getClass)
+  private val LogTag = "+++++++++++++++++++++++++++++"
 }
