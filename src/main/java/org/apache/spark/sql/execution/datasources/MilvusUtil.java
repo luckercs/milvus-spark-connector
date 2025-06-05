@@ -9,10 +9,12 @@ import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq;
 import io.milvus.v2.service.collection.request.HasCollectionReq;
 import io.milvus.v2.service.collection.response.DescribeCollectionResp;
+import io.milvus.v2.service.partition.request.ListPartitionsReq;
 import io.milvus.v2.service.vector.request.InsertReq;
 import io.milvus.v2.service.vector.request.QueryIteratorReq;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MilvusUtil {
@@ -84,20 +86,27 @@ public class MilvusUtil {
         return res;
     }
 
-    public QueryIterator queryCollection(MilvusClientV2 client, String dbName, String collectionName, long batchSize) {
+    public List<String> getCollectionPartitions(String collectionName) {
+        MilvusClientV2 client = getClient();
+        List<String> partitions = client.listPartitions(ListPartitionsReq.builder().collectionName(collectionName).build());
+        closeClient(client);
+        return partitions;
+    }
+
+    public QueryIterator queryCollection(MilvusClientV2 client, String dbName, String collectionName, String partitionName, long batchSize) {
         List<String> outputFields = new ArrayList<>();
         List<CreateCollectionReq.FieldSchema> collectionSchema = getCollectionSchema(dbName, collectionName);
         for (CreateCollectionReq.FieldSchema fieldSchema : collectionSchema) {
             outputFields.add(fieldSchema.getName());
         }
         QueryIterator res = client.queryIterator(
-                QueryIteratorReq.builder().databaseName(dbName).collectionName(collectionName).batchSize(batchSize).expr("").ignoreGrowing(false).consistencyLevel(ConsistencyLevel.STRONG).outputFields(outputFields).build());
+                QueryIteratorReq.builder().databaseName(dbName).collectionName(collectionName).partitionNames(Arrays.asList(partitionName)).batchSize(batchSize).expr("").ignoreGrowing(false).consistencyLevel(ConsistencyLevel.STRONG).outputFields(outputFields).build());
         return res;
     }
 
-    public void insertCollection(String collectionName, List<JsonObject> data) {
+    public void insertCollection(String collectionName, String partitionName, List<JsonObject> data) {
         MilvusClientV2 client = getClient();
-        client.insert(InsertReq.builder().collectionName(collectionName).data(data).build());
+        client.insert(InsertReq.builder().collectionName(collectionName).partitionName(partitionName).data(data).build());
         closeClient(client);
     }
 }

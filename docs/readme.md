@@ -29,13 +29,18 @@ mvn install:install-file -Dfile=milvus-spark-connector-1.0.0.jar -DgroupId=com.l
 val df = spark.read.format("milvus")
       .option("uri", "http://localhost:19530")
       .option("token", "root:Milvus")
+      .option("database", "default")
       .option("collection", "test")
+      .option("batchsize", 1000)
       .load()
 
 df.write.format("milvus")
       .option("uri", "http://localhost:19530")
       .option("token", "root:Milvus")
+      .option("database", "default")
       .option("collection", "test")
+      .option("batchsize", 1000)
+      .mode(SaveMode.Append)
       .save()
 ```
 ## (3) Thanks
