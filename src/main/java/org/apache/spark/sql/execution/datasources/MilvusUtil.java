@@ -77,11 +77,10 @@ public class MilvusUtil {
         return res;
     }
 
-    public List<CreateCollectionReq.FieldSchema> getCollectionSchema(String collectionName) {
+    public DescribeCollectionResp getCollectionDesc(String collectionName) {
         MilvusClientV2 client = getClient();
-        DescribeCollectionResp describeCollectionResp = client.describeCollection(
+        DescribeCollectionResp res = client.describeCollection(
                 DescribeCollectionReq.builder().databaseName(dbName).collectionName(collectionName).build());
-        List<CreateCollectionReq.FieldSchema> res = describeCollectionResp.getCollectionSchema().getFieldSchemaList();
         closeClient(client);
         return res;
     }
@@ -95,7 +94,7 @@ public class MilvusUtil {
 
     public QueryIterator queryCollection(MilvusClientV2 client, String collectionName, String partitionName, long batchSize) {
         List<String> outputFields = new ArrayList<>();
-        List<CreateCollectionReq.FieldSchema> collectionSchema = getCollectionSchema(collectionName);
+        List<CreateCollectionReq.FieldSchema> collectionSchema = getCollectionDesc(collectionName).getCollectionSchema().getFieldSchemaList();
         for (CreateCollectionReq.FieldSchema fieldSchema : collectionSchema) {
             outputFields.add(fieldSchema.getName());
         }
