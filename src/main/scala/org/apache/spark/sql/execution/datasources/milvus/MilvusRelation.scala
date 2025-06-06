@@ -38,7 +38,7 @@ case class MilvusRelation(
       if (!milvusUtil.hasCollection(collectionName)) {
         throw new Exception("milvus Collection " + collectionName + " does not exist in database " + dbName)
       }
-      milvusUtil.getCollectionSchema(dbName, collectionName)
+      milvusUtil.getCollectionSchema(collectionName)
     }
     milvusSchemas
   }
@@ -60,7 +60,7 @@ case class MilvusRelation(
     val rdds = new util.ArrayList[RDD[Row]]()
 
     milvusPartitions.asScala.foreach(partition => {
-      val queryIterator = milvusUtil.queryCollection(milvusClient, dbName, collectionName, partition, batchsize.toLong)
+      val queryIterator = milvusUtil.queryCollection(milvusClient, collectionName, partition, batchsize.toLong)
       var flag = true
       while (flag) {
         val milvusRows = queryIterator.next()
@@ -271,78 +271,80 @@ case class MilvusRelation(
 
     for (i <- 0 until milvusSchemas.size) {
       val fieldSchema = milvusSchemas.get(i)
-      fieldSchema.getDataType match {
-        case common.DataType.Bool => milvusRow.addProperty(fieldSchema.getName, row.getAs[Boolean](fieldSchema.getName))
-        case common.DataType.Int8 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Byte](fieldSchema.getName))
-        case common.DataType.Int16 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Short](fieldSchema.getName))
-        case common.DataType.Int32 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Integer](fieldSchema.getName))
-        case common.DataType.Int64 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Long](fieldSchema.getName))
-        case common.DataType.Float => milvusRow.addProperty(fieldSchema.getName, row.getAs[Float](fieldSchema.getName))
-        case common.DataType.Double => milvusRow.addProperty(fieldSchema.getName, row.getAs[Double](fieldSchema.getName))
-        case common.DataType.String => milvusRow.addProperty(fieldSchema.getName, row.getAs[String](fieldSchema.getName))
-        case common.DataType.VarChar => milvusRow.addProperty(fieldSchema.getName, row.getAs[String](fieldSchema.getName))
-        case common.DataType.JSON => milvusRow.add(fieldSchema.getName, gson.fromJson(row.getAs[String](fieldSchema.getName), classOf[com.google.gson.JsonElement]))
-        case common.DataType.Array => {
-          fieldSchema.getElementType match {
-            case common.DataType.Bool => {
-              val jsonArray = new JsonArray()
-              row.getList[Boolean](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
+      if (!(fieldSchema.getIsPrimaryKey && fieldSchema.getAutoID)) {
+        fieldSchema.getDataType match {
+          case common.DataType.Bool => milvusRow.addProperty(fieldSchema.getName, row.getAs[Boolean](fieldSchema.getName))
+          case common.DataType.Int8 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Byte](fieldSchema.getName))
+          case common.DataType.Int16 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Short](fieldSchema.getName))
+          case common.DataType.Int32 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Integer](fieldSchema.getName))
+          case common.DataType.Int64 => milvusRow.addProperty(fieldSchema.getName, row.getAs[Long](fieldSchema.getName))
+          case common.DataType.Float => milvusRow.addProperty(fieldSchema.getName, row.getAs[Float](fieldSchema.getName))
+          case common.DataType.Double => milvusRow.addProperty(fieldSchema.getName, row.getAs[Double](fieldSchema.getName))
+          case common.DataType.String => milvusRow.addProperty(fieldSchema.getName, row.getAs[String](fieldSchema.getName))
+          case common.DataType.VarChar => milvusRow.addProperty(fieldSchema.getName, row.getAs[String](fieldSchema.getName))
+          case common.DataType.JSON => milvusRow.add(fieldSchema.getName, gson.fromJson(row.getAs[String](fieldSchema.getName), classOf[com.google.gson.JsonElement]))
+          case common.DataType.Array => {
+            fieldSchema.getElementType match {
+              case common.DataType.Bool => {
+                val jsonArray = new JsonArray()
+                row.getList[Boolean](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Int8 => {
+                val jsonArray = new JsonArray()
+                row.getList[Byte](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Int16 => {
+                val jsonArray = new JsonArray()
+                row.getList[Short](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Int32 => {
+                val jsonArray = new JsonArray()
+                row.getList[Integer](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Int64 => {
+                val jsonArray = new JsonArray()
+                row.getList[Long](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Float => {
+                val jsonArray = new JsonArray()
+                row.getList[Float](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.Double => {
+                val jsonArray = new JsonArray()
+                row.getList[Double](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.String => {
+                val jsonArray = new JsonArray()
+                row.getList[String](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case common.DataType.VarChar => {
+                val jsonArray = new JsonArray()
+                row.getList[String](i).asScala.foreach(jsonArray.add(_))
+                milvusRow.add(fieldSchema.getName, jsonArray)
+              }
+              case _ => throw new RuntimeException("Unsupported milvus array element data type: " + fieldSchema.getElementType.toString() + " in field: " + fieldSchema.getName)
             }
-            case common.DataType.Int8 => {
-              val jsonArray = new JsonArray()
-              row.getList[Byte](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.Int16 => {
-              val jsonArray = new JsonArray()
-              row.getList[Short](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.Int32 => {
-              val jsonArray = new JsonArray()
-              row.getList[Integer](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.Int64 => {
-              val jsonArray = new JsonArray()
-              row.getList[Long](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.Float => {
-              val jsonArray = new JsonArray()
-              row.getList[Float](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.Double => {
-              val jsonArray = new JsonArray()
-              row.getList[Double](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.String => {
-              val jsonArray = new JsonArray()
-              row.getList[String](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case common.DataType.VarChar => {
-              val jsonArray = new JsonArray()
-              row.getList[String](i).asScala.foreach(jsonArray.add(_))
-              milvusRow.add(fieldSchema.getName, jsonArray)
-            }
-            case _ => throw new RuntimeException("Unsupported milvus array element data type: " + fieldSchema.getElementType.toString() + " in field: " + fieldSchema.getName)
           }
+          case common.DataType.BinaryVector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
+          case common.DataType.FloatVector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Float](i)))
+          case common.DataType.Float16Vector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
+          case common.DataType.BFloat16Vector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
+          case common.DataType.SparseFloatVector => {
+            val data = row.getMap[Long, Float](i)
+            val sparse = new util.TreeMap[Long, Float]
+            data.foreach { case (k, v) => sparse.put(k, v) }
+            milvusRow.add(fieldSchema.getName, gson.toJsonTree(sparse))
+          }
+          case _ => throw new RuntimeException("Unsupported milvus data type: " + fieldSchema.getDataType.toString() + " in field: " + fieldSchema.getName)
         }
-        case common.DataType.BinaryVector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
-        case common.DataType.FloatVector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Float](i)))
-        case common.DataType.Float16Vector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
-        case common.DataType.BFloat16Vector => milvusRow.add(fieldSchema.getName, gson.toJsonTree(row.getList[Byte](i)))
-        case common.DataType.SparseFloatVector => {
-          val data = row.getMap[Long, Float](i)
-          val sparse = new util.TreeMap[Long, Float]
-          data.foreach { case (k, v) => sparse.put(k, v) }
-          milvusRow.add(fieldSchema.getName, gson.toJsonTree(sparse))
-        }
-        case _ => throw new RuntimeException("Unsupported milvus data type: " + fieldSchema.getDataType.toString() + " in field: " + fieldSchema.getName)
       }
     }
     milvusRow
