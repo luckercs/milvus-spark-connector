@@ -7,10 +7,22 @@ milvus-spark-connector, 支持 milvus 2.5.x 等版本
 
 ## (2) Get Started
 
+### (2.1) Query with SparkSql
+
+```shell
+# spark-sql --jars milvus-spark-connector-1.0.0-shade.jar
+CREATE TABLE hello_milvus USING org.apache.spark.sql.execution.datasources.milvus.MilvusDataSource \
+OPTIONS (uri "http://localhost:19530", token "root:Milvus", collection "hello_milvus");
+
+desc hello_milvus;
+select * from hello_milvus limit 10;
+```
+
+### (2.2) Query with code
+
 ```shell
 
 # (1) maven local install
-# milvus-spark-connector-1.0.0.jar 可以在release发布页面下载获取
 mvn install:install-file -Dfile=milvus-spark-connector-1.0.0.jar -DgroupId=com.luckercs -DartifactId=milvus-spark-connector -Dversion=1.0.0 -Dpackaging=jar
 
 # (2) add maven dependency
