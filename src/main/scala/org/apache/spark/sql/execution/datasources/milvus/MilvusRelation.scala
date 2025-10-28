@@ -4,6 +4,7 @@ import com.google.gson.{Gson, JsonArray, JsonObject}
 import io.milvus.response.QueryResultsWrapper
 import io.milvus.v2.common
 import io.milvus.v2.service.collection.request.CreateCollectionReq
+import io.milvus.v2.service.collection.request.CreateCollectionReq.FieldSchema
 import io.milvus.v2.service.collection.response.DescribeCollectionResp
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.execution.datasources.MilvusUtil
@@ -159,7 +160,13 @@ case class MilvusRelation(
     val fieldNames: Array[String] = sparkSchemas.fieldNames
     val values = ArrayBuffer[Object]()
     for (i <- 0 until fieldNames.size - 1) {
-      milvusDesc.getCollectionSchema.getFieldSchemaList.get(i).getDataType match {
+      var filedSchema: FieldSchema = null
+      for (elem <- milvusDesc.getCollectionSchema.getFieldSchemaList.asScala) {
+        if(elem.getName.equals(fieldNames(i))) {
+          filedSchema = elem
+        }
+      }
+      filedSchema.getDataType match {
         case common.DataType.Bool => values += milvusRowValues(i).asInstanceOf[java.lang.Boolean]
         case common.DataType.Int8 => {
           val value = milvusRowValues(i).asInstanceOf[java.lang.Integer]
