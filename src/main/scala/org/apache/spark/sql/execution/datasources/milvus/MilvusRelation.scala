@@ -112,39 +112,44 @@ case class MilvusRelation(
 
   private def milvusSchema2SparkSchema(milvusSchemas: util.List[CreateCollectionReq.FieldSchema]): StructType = {
     var sparkStructType = new StructType
-
+    val milvusUtil = new MilvusUtil(uri, token, dbName)
+    val funcOutputFieldList = milvusUtil.getCollectionFunctionOutputFieldList(collectionName)
     for (milvusFieldSchema <- milvusSchemas.asScala) {
-      milvusFieldSchema.getDataType match {
-        case common.DataType.Bool => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.BooleanType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Int8 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.ByteType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Int16 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.ShortType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Int32 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.IntegerType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Int64 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.LongType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Float => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.FloatType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Double => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.DoubleType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.String => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.VarChar => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.JSON => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Array => {
-          milvusFieldSchema.getElementType match {
-            case common.DataType.Bool => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.BooleanType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Int8 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Int16 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ShortType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Int32 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.IntegerType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Int64 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.LongType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Float => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.Double => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.DoubleType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.String => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.StringType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case common.DataType.VarChar => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.StringType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-            case _ => throw new RuntimeException("Unsupported milvus array element data type: " + milvusFieldSchema.getElementType.toString() + " in field: " + milvusFieldSchema.getName)
+      if (funcOutputFieldList.contains(milvusFieldSchema.getName)) {
+        Log.info("skip milvus funcOutputField: " + milvusFieldSchema.getName)
+      } else {
+        milvusFieldSchema.getDataType match {
+          case common.DataType.Bool => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.BooleanType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Int8 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.ByteType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Int16 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.ShortType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Int32 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.IntegerType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Int64 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.LongType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Float => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.FloatType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Double => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.DoubleType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.String => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.VarChar => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.JSON => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.StringType, milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Array => {
+            milvusFieldSchema.getElementType match {
+              case common.DataType.Bool => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.BooleanType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Int8 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Int16 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ShortType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Int32 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.IntegerType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Int64 => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.LongType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Float => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.Double => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.DoubleType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.String => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.StringType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case common.DataType.VarChar => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.StringType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+              case _ => throw new RuntimeException("Unsupported milvus array element data type: " + milvusFieldSchema.getElementType.toString() + " in field: " + milvusFieldSchema.getName)
+            }
           }
+          case common.DataType.BinaryVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.FloatVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.Float16Vector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.BFloat16Vector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case common.DataType.SparseFloatVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createMapType(DataTypes.LongType, DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
+          case _ => throw new RuntimeException("Unsupported milvus data type: " + milvusFieldSchema.getDataType.toString() + " in field: " + milvusFieldSchema.getName)
         }
-        case common.DataType.BinaryVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.FloatVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.Float16Vector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.BFloat16Vector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createArrayType(DataTypes.ByteType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case common.DataType.SparseFloatVector => sparkStructType = sparkStructType.add(milvusFieldSchema.getName, DataTypes.createMapType(DataTypes.LongType, DataTypes.FloatType), milvusFieldSchema.getIsNullable, milvusFieldSchema.getDescription);
-        case _ => throw new RuntimeException("Unsupported milvus data type: " + milvusFieldSchema.getDataType.toString() + " in field: " + milvusFieldSchema.getName)
       }
     }
     sparkStructType

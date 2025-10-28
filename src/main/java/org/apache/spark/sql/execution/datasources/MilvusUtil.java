@@ -85,6 +85,16 @@ public class MilvusUtil {
         return res;
     }
 
+    public List<String> getCollectionFunctionOutputFieldList(String collectionName) {
+        List<String> functionOutputFieldNames = new ArrayList<>();
+        DescribeCollectionResp collectionDesc = getCollectionDesc(collectionName);
+        List<CreateCollectionReq.Function> functionList = collectionDesc.getCollectionSchema().getFunctionList();
+        for (CreateCollectionReq.Function function : functionList) {
+            functionOutputFieldNames.addAll(function.getOutputFieldNames());
+        }
+        return functionOutputFieldNames;
+    }
+
     public List<String> getCollectionPartitions(String collectionName) {
         MilvusClientV2 client = getClient();
         List<String> partitions = client.listPartitions(ListPartitionsReq.builder().collectionName(collectionName).build());
@@ -93,10 +103,14 @@ public class MilvusUtil {
     }
 
     public QueryIterator queryCollection(MilvusClientV2 client, String collectionName, String partitionName, long batchSize) {
+        List<String> collectionFunctionOutputFieldList = getCollectionFunctionOutputFieldList(collectionName);
+
         List<String> outputFields = new ArrayList<>();
         List<CreateCollectionReq.FieldSchema> collectionSchema = getCollectionDesc(collectionName).getCollectionSchema().getFieldSchemaList();
         for (CreateCollectionReq.FieldSchema fieldSchema : collectionSchema) {
-            outputFields.add(fieldSchema.getName());
+            if (!collectionFunctionOutputFieldList.contains(fieldSchema.getName())) {
+                outputFields.add(fieldSchema.getName());
+            }
         }
         QueryIterator res = client.queryIterator(
                 QueryIteratorReq.builder().databaseName(dbName).collectionName(collectionName).partitionNames(Arrays.asList(partitionName)).batchSize(batchSize).expr("").ignoreGrowing(false).consistencyLevel(ConsistencyLevel.STRONG).outputFields(outputFields).build());
