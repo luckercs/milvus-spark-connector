@@ -13,7 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <milvus.sdk.version>2.5.9</milvus.sdk.version>
+        <milvus.sdk.version>2.5.14</milvus.sdk.version>
     </properties>
 
     <dependencies>
